@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+       xmlns:tx="http://www.springframework.org/schema/tx" xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+         http://www.springframework.org/schema/jdbc
+          http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
+          http://www.springframework.org/schema/tx
+          http://www.springframework.org/schema/tx/spring-tx.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <!--DataSource: 使用Spring的数据源替换Mybatis的配置 c3p0 dbcp druid
+    我们这里使用Spring提供的JDBC
+    -->
+    <bean id="datasource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="com.mysql.jdbc.Driver"/>
+        <property name="url" value="jdbc:mysql://localhost:3306/mybatis?useUnicode=true&amp;characterEncoding=UTF-8&amp;serverTimezone=GMT&amp;useSSL=false"/>
+        <property name="username" value="root"/>
+        <property name="password" value="pxn19960209"/>
+    </bean>
+    <!--sqlSessionFactory：它是单个数据库映射关系经过编译后的内存镜像
+    每一个MyBatis的应用程序都以一个SqlSessionFactory对象的实例为核心.
+    同时SqlSessionFactory也是线程安全的,SqlSessionFactory一旦被创建,
+    应该在应用执行期间都存在.在应用运行期间不要重复创建多次-->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="datasource"/>
+        <!--绑定Mybatis配置文件-->
+        <property name="configLocation" value="classpath:mybatis-config.xml"/>
+        <!--存放mapper.xml的文件  classpath:后面注意空格问题-->
+        <property name="mapperLocations" value="classpath:com/cunshan/mapper/*.xml"/>
+    </bean>
+
+    <!--配置声明式事务-->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="datasource"/>
+    </bean>
+
+    <!--结合AOP实现事务的织入-->
+    <!--配置事务通知-->
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <!--给哪些方法配置事务-->
+        <!--配置事务的传播特性 new  propagation="REQUIRED"-->
+        <tx:attributes>
+            <!--REQUIRED默认传播方式：当事务不存在时会创建一个事务-->
+            <tx:method name="add" propagation="REQUIRED"/>
+<!--            <tx:method name="delete" propagation="REQUIRED"/>-->
+            <tx:method name="update" propagation="REQUIRED"/>
+            <tx:method name="query" read-only="true"/>
+<!--            <tx:method name="*" propagation="REQUIRED"/>-->
+        </tx:attributes>
+    </tx:advice>
+
+    <!--配置事务切入-->
+    <aop:config>
+        <!--切入点，在那个地方执行-->
+        <aop:pointcut id="txPointCut"  expression="execution(* com.cunshan.mapper.*.*(..))"/>
+        <!--以AOP的形式进行事务通知-->
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="txPointCut"/>
+    </aop:config>
+
+</beans>
